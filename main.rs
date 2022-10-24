@@ -27,26 +27,42 @@ fn find_midpoint(points: &Vec<(f32, f32)>) -> (f32, f32) {
     (sum.0/div, sum.1/div)
 }
 
-fn find_line_values_from_points(points: &Vec<(f32, f32)>) -> Vec<(f32, f32)> {
+fn find_line_values_from_points(points: &Vec<(f32, f32)>) -> Vec<(f32, f32, bool)> {
     let mut lines = Vec::with_capacity(points.len());
     for (i, point) in points.iter().enumerate() {
         let next_point = points.get((i+1)%points.len()).unwrap();
-        let k = (point.1-next_point.1)/(point.0-next_point.0);
-        let m = point.1-k*point.0;
-        lines.push((k,m));
+        let dy = point.1-next_point.1;
+        let dx = point.0-next_point.0;
+        let k;
+        let k_is_reciprocal;
+        let m;
+        if dy > dx {
+            k = dy/dx;
+            k_is_reciprocal = false;
+            m = point.1-k*point.0;
+        } else {
+            k = dx/dy;
+            k_is_reciprocal = true;
+            m = point.0-k*point.1;
+        }
+        lines.push((k,m, k_is_reciprocal));
     }
     lines
 }
 
-fn point_over_under_lines(lines: &Vec<(f32, f32)>, point: (f32, f32)) -> Vec<bool> {
+fn point_over_under_lines(lines: &Vec<(f32, f32, bool)>, point: (f32, f32)) -> Vec<bool> {
     let mut output = Vec::with_capacity(lines.len());
     for line in lines.iter() {
-        output.push((point.1-line.0*point.0-line.1).is_sign_positive());
+        if line.2 {
+            output.push((point.0-line.0*point.1-line.1).is_sign_positive());
+        } else {
+            output.push((point.1-line.0*point.0-line.1).is_sign_positive());
+        }
     }
     output
 }
 
-fn point_is_inside_polygon(lines: &Vec<(f32, f32)>, point: (f32, f32), midpoint_over_under_lines: &Vec<bool>) -> bool {
+fn point_is_inside_polygon(lines: &Vec<(f32, f32, bool)>, point: (f32, f32), midpoint_over_under_lines: &Vec<bool>) -> bool {
     let point_over_under_lines = point_over_under_lines(lines, point);
     return point_over_under_lines == *midpoint_over_under_lines
 }
