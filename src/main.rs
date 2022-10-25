@@ -61,16 +61,49 @@ struct Lines(pub Vec<Line>);
 
 fn main() {
     let mut points = points![(-1., 4.), (3., 3.), (-3., -2.)];
-    let testcases = points![(-2., 2.), (-1., 2.), (2., 3.36)];
     let midpoint = points.get_mean_point();
     points.sort_points_for_lines(midpoint);
     let lines = points.get_lines();
 
+    render(-5.0..5.0, -5.0..5.0, &lines, midpoint)
+        .save("out.png")
+        .unwrap();
+
+    let testcases = points![(-2., 2.), (-1., 2.), (2., 3.36)];
     for test in &testcases {
         let midpoint_over_under_lines = lines.point_over_under_lines(midpoint);
         let point_inside = lines.point_is_inside_polygon(test, midpoint_over_under_lines);
         println!("{test:?} is inside {point_inside}");
     }
+}
+
+fn render(
+    x_range: std::ops::Range<f64>,
+    y_range: std::ops::Range<f64>,
+    lines: &Lines,
+    midpoint: Point,
+) -> image::RgbImage {
+    let x_dist = x_range.end - x_range.start;
+    let y_dist = y_range.end - y_range.start;
+    let x_res = 512;
+    let y_res = 512;
+
+    let now = std::time::Instant::now();
+    let img = image::RgbImage::from_fn(x_res, y_res, |x, y| {
+        let y = y_res - y;
+        let x = x_range.start + x as f64 / x_res as f64 * x_dist;
+        let y = y_range.start + y as f64 / y_res as f64 * y_dist;
+
+        let midpoint_over_under_lines = lines.point_over_under_lines(midpoint);
+        let contains = lines.point_is_inside_polygon(Point::new(x, y), midpoint_over_under_lines);
+        if contains {
+            image::Rgb([255, 255, 255])
+        } else {
+            image::Rgb([0, 0, 0])
+        }
+    });
+    println!("Took {:?}", now.elapsed());
+    img
 }
 
 impl Points {
