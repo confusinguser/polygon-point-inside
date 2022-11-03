@@ -60,7 +60,16 @@ struct Line {
 struct Lines(pub Vec<Line>);
 
 fn main() {
-    let mut points = points![(-1., 4.), (3., 3.), (-3., -2.)];
+    let mut points = points![
+        (2., 4.),
+        (2., 0.),
+        (-2., -1.),
+        (-4., 3.),
+        (-5., 0.75),
+        (-3.5, -0.5),
+        (0.55, 4.2),
+        (2.6, 2.1)
+    ];   
     let midpoint = points.get_mean_point();
     points.sort_points_for_lines(midpoint);
     let lines = points.get_lines();
@@ -68,13 +77,6 @@ fn main() {
     render(-5.0..5.0, -5.0..5.0, &lines, midpoint)
         .save("out.png")
         .unwrap();
-
-    let testcases = points![(-2., 2.), (-1., 2.), (2., 3.36)];
-    for test in &testcases {
-        let midpoint_over_under_lines = lines.point_over_under_lines(midpoint);
-        let point_inside = lines.point_is_inside_polygon(test, midpoint_over_under_lines);
-        println!("{test:?} is inside {point_inside}");
-    }
 }
 
 fn render(
@@ -82,7 +84,7 @@ fn render(
     y_range: std::ops::Range<f64>,
     lines: &Lines,
     midpoint: Point,
-) -> image::RgbImage {
+    ) -> image::RgbImage {
     let x_dist = x_range.end - x_range.start;
     let y_dist = y_range.end - y_range.start;
     let x_res = 512;
@@ -128,31 +130,31 @@ impl Points {
     fn get_lines(&self) -> Lines {
         Lines(
             self.into_iter()
-                .enumerate()
-                .map(|(i, point)| {
-                    let next_point = self.list[(i + 1) % self.list.len()];
-                    let dy = point.y - next_point.y;
-                    let dx = point.x - next_point.x;
-                    let slope;
-                    let is_reciprocal;
-                    let offset;
+            .enumerate()
+            .map(|(i, point)| {
+                let next_point = self.list[(i + 1) % self.list.len()];
+                let dy = point.y - next_point.y;
+                let dx = point.x - next_point.x;
+                let slope;
+                let is_reciprocal;
+                let offset;
 
-                    if dy.abs() > dx.abs() {
-                        slope = dy / dx;
-                        is_reciprocal = false;
-                        offset = point.y - slope * point.x;
-                    } else {
-                        slope = dx / dy;
-                        is_reciprocal = true;
-                        offset = point.x - slope * point.y;
-                    }
-                    Line {
-                        slope,
-                        offset,
-                        is_reciprocal,
-                    }
-                })
-                .collect(),
+                if dy.abs() > dx.abs() {
+                    slope = dy / dx;
+                    is_reciprocal = false;
+                    offset = point.y - slope * point.x;
+                } else {
+                    slope = dx / dy;
+                    is_reciprocal = true;
+                    offset = point.x - slope * point.y;
+                }
+                Line {
+                    slope,
+                    offset,
+                    is_reciprocal,
+                }
+            })
+        .collect(),
         )
     }
 }
@@ -173,7 +175,7 @@ impl Lines {
         &self,
         point: Point,
         midpoint_over_under_lines: impl IntoIterator<Item = bool>,
-    ) -> bool {
+        ) -> bool {
         let point_over_under_lines = self.point_over_under_lines(point);
         // if iterator equals
         point_over_under_lines.eq(midpoint_over_under_lines.into_iter())
