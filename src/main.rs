@@ -69,7 +69,7 @@ fn main() {
         (-3.5, -0.5),
         (0.55, 4.2),
         (2.6, 2.1)
-    ];   
+    ];
     let midpoint = points.get_mean_point();
     points.sort_points_for_lines(midpoint);
     let lines = points.get_lines();
@@ -84,20 +84,20 @@ fn render(
     y_range: std::ops::Range<f64>,
     lines: &Lines,
     midpoint: Point,
-    ) -> image::RgbImage {
+) -> image::RgbImage {
     let x_dist = x_range.end - x_range.start;
     let y_dist = y_range.end - y_range.start;
     let x_res = 512;
     let y_res = 512;
 
     let now = std::time::Instant::now();
+    let midpoint_over_under_lines: Vec<bool> =
+        lines.point_over_under_lines(midpoint).into_iter().collect();
     let img = image::RgbImage::from_fn(x_res, y_res, |x, y| {
         let y = y_res - y;
         let x = x_range.start + x as f64 / x_res as f64 * x_dist;
         let y = y_range.start + y as f64 / y_res as f64 * y_dist;
-
-        let midpoint_over_under_lines = lines.point_over_under_lines(midpoint);
-        let contains = lines.point_is_inside_polygon(Point::new(x, y), midpoint_over_under_lines);
+        let contains = lines.point_is_inside_polygon(Point::new(x, y), &midpoint_over_under_lines);
         if contains {
             image::Rgb([255, 255, 255])
         } else {
@@ -130,31 +130,31 @@ impl Points {
     fn get_lines(&self) -> Lines {
         Lines(
             self.into_iter()
-            .enumerate()
-            .map(|(i, point)| {
-                let next_point = self.list[(i + 1) % self.list.len()];
-                let dy = point.y - next_point.y;
-                let dx = point.x - next_point.x;
-                let slope;
-                let is_reciprocal;
-                let offset;
+                .enumerate()
+                .map(|(i, point)| {
+                    let next_point = self.list[(i + 1) % self.list.len()];
+                    let dy = point.y - next_point.y;
+                    let dx = point.x - next_point.x;
+                    let slope;
+                    let is_reciprocal;
+                    let offset;
 
-                if dy.abs() > dx.abs() {
-                    slope = dy / dx;
-                    is_reciprocal = false;
-                    offset = point.y - slope * point.x;
-                } else {
-                    slope = dx / dy;
-                    is_reciprocal = true;
-                    offset = point.x - slope * point.y;
-                }
-                Line {
-                    slope,
-                    offset,
-                    is_reciprocal,
-                }
-            })
-        .collect(),
+                    if dy.abs() > dx.abs() {
+                        slope = dy / dx;
+                        is_reciprocal = false;
+                        offset = point.y - slope * point.x;
+                    } else {
+                        slope = dx / dy;
+                        is_reciprocal = true;
+                        offset = point.x - slope * point.y;
+                    }
+                    Line {
+                        slope,
+                        offset,
+                        is_reciprocal,
+                    }
+                })
+                .collect(),
         )
     }
 }
@@ -171,13 +171,16 @@ impl Lines {
         })
     }
 
-    fn point_is_inside_polygon(
-        &self,
-        point: Point,
-        midpoint_over_under_lines: impl IntoIterator<Item = bool>,
-        ) -> bool {
+    fn point_is_inside_polygon(&self, point: Point, midpoint_over_under_lines: &[bool]) -> bool {
         let point_over_under_lines = self.point_over_under_lines(point);
         // if iterator equals
-        point_over_under_lines.eq(midpoint_over_under_lines.into_iter())
+        let mut i = 0;
+        for val in point_over_under_lines {
+            if midpoint_over_under_lines[i] != val {
+                return false;
+            }
+            i += 1;
+        }
+        true
     }
 }
